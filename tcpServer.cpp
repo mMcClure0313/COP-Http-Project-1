@@ -18,12 +18,11 @@ using namespace std;
 
 int main(){
     
-    char tcp_server_message[256] = " Hello, I am the TCP Server you successfully connected to!! \n\n               Bye Bye!!!\n\n";
-
-    int TCP_server_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if(TCP_server_socket == -1) {
+    int tcp_server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if(tcp_server_socket == -1) {
         cerr << "Failed to create socket." << endl;
     }
+    cout << "Server socket created" << endl << endl;
 
     sockaddr_in serverAddress;
     serverAddress.sin_family = AF_INET;
@@ -31,16 +30,38 @@ int main(){
     serverAddress.sin_addr.s_addr = INADDR_ANY;
 
     //Binds socket to ip address and port.
-    bind(serverSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
+    bind(tcp_server_socket, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
+    cout << "server created" << endl << endl;
     //Listens for a client
-    listen(serverSocket, 5);
+    cout << "server listening for a connection" << endl << endl;
+    listen(tcp_server_socket, 5);
 
-    int tcp_client_socket;
-    tcp_client_socket = accept(tcp_server_socket, NULL, NULL);
+    while(true){
+        int tcp_client_socket;
+        tcp_client_socket = accept(tcp_server_socket, NULL, NULL);
 
-    send(tcp_client_socket, tcp_server_message, sizeof(tcp_server_message), 0);
+        if(tcp_client_socket < 0){
+            cerr << "Accept failed";
+            continue;
+        }
 
-    close(tcp_server_socket)
+        const char* htmlResponse =
+            "HTTP/1.1 200 OK\r\n"           //Header
+            "Content-Type: text/html\r\n"   //Header
+            "\r\n"
+            "<!DOCTYPE html>\n"
+            "<html>\n"
+            "<head><title>Simple Server</title></head>\n"
+            "<body>\n"
+            "<h1>Hello from the TCP Server!</h1>\n"
+            "<p>This is a simple HTML page served by the server.</p>\n"
+            "</body>\n"
+            "</html>\n";
+
+        send(tcp_client_socket, htmlResponse, strlen(htmlResponse), 0);
+
+        close(tcp_client_socket);
+    }
 
     return 0;
 
