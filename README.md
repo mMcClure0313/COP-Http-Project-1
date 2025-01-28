@@ -5,4 +5,4 @@
 
 @authors: Matthew McClure, Hunter Seth Mercer
 
-A simple server client project where the server serves the client with an https page, with several links that will be handled.
+A simple server project where the server serves the client browser with an https page, with several links that will be handled as described by the project description
