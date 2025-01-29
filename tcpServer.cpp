@@ -6,6 +6,11 @@
  * Simple application used to start up a TCP server used to serve a TCP Client (webpage) the index.html, testPressence.html and img.jpg included in the project folder.
  * Coded on a Windows 10 machine using Visual Studio code and ran through an Ubantu WSL terminal integreated in VSCode. 
  * 
+ * This application is ran using the Ubuntu WSL and going to a browser of choice and typing `localhost:60060` in while the server is running.
+ * To close the server, use `ctrl+c` in the terminal.
+ * 
+ * There is a text input field that sends a message to the server that is recieved. 
+ * 
  */
 
 
@@ -48,6 +53,8 @@ void handleClient(int clientSocket){
     // Parse request to extract requested file
     string request(buffer); //convert c-style char array to c++ string, better for manip
     size_t pos = request.find("GET");
+    size_t post_pos = request.find("POST");
+    //Method for If the request is a GET
     if(pos != string::npos){
         size_t start = request.find("/", pos)+1;
         size_t end = request.find(" ", start);
@@ -80,7 +87,25 @@ void handleClient(int clientSocket){
             send(clientSocket, response.c_str(), response.size(), 0);
             cout << "File not found: " << filename << endl;
         }
-    } else {
+    } else if(post_pos != string::npos){
+        size_t inputPos = request.find("input=")+6;
+        size_t endPos = request.find(" ", inputPos);
+
+        string input = request.substr(inputPos, endPos-inputPos);
+
+        cout << endl << "Client says: ( " << input << " ) using a POST request" << endl << endl;
+
+        // Respond to POST request
+        string fileData = readFile("index.html");
+
+            string response = "HTTP/1.1 200 OK\r\n";
+            response += "Content-Length: " + to_string(fileData.size()) + "\r\n";
+            response += "Content-Type: text/html\r\n\r\n"; // Assume all files are HTML
+            response += fileData;
+
+        send(clientSocket, response.c_str(), response.size(), 0);
+
+    }else {
         // Invalid request, send HTTP 400 Bad Request
         string response = "HTTP/1.1 400 Bad Request\r\n";
         response += "Content-Length: 45\r\n";
