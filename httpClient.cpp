@@ -26,10 +26,6 @@
 
 using namespace std;
 
-void handleServer(){
-
-}
-
 int findSymbol(const char arr[], char target){
 
     if (arr == nullptr) return -1; 
@@ -44,11 +40,23 @@ int findSymbol(const char arr[], char target){
 
 int main(int argc, char *argv[]){
     //Specify program usage and debug statements.
-    if(argc != 3){
+    if(argc <= 2){
         cout << "please run the application like so: './httpClient <serverIdentifier:portNumber> <fileToRequest/messageToSend>" << endl;
         return -1;
     } else{
-        cout << argv[0] << "\t" << argv[1] << "\t" << argv[2] << endl;
+        //cout << argv[0] << "\t" << argv[1] << "\t" << argv[2] << endl;
+    }
+
+    //If the argument is ./httpClient 0.0.0.0:60060 GET index.html then the argc is 4 and we need to combine the two in order to get the right message.
+    char fullMessage[256] = {0}; //setting the message size to be 256
+    for(int i = 2; i < argc; i++){
+        if (strlen(fullMessage) + strlen(argv[i]) + 1 >= sizeof(fullMessage)) {
+            cerr << "Error: Message too long!" << endl;
+            return -1;
+        }
+        
+        if (i > 2) strncat(fullMessage, " ", sizeof(fullMessage) - strlen(fullMessage)); // Add space
+        strncat(fullMessage, argv[i], sizeof(fullMessage) - strlen(fullMessage) - 1);
     }
 
         //Separate address from the port
@@ -64,40 +72,55 @@ int main(int argc, char *argv[]){
             serverIP[separator] = '\0';
             int port = atoi(argv[1] + separator + 1);
 
-            cout << "Connecting to " << serverIP << " on port " << port << endl;
+            cout << "Client ready. \n\n";
+            cout << "Connecting to " << serverIP << " on port " << port << "\n";
 
 
-        int tcp_client_socket; //Socket descriptor
-        tcp_client_socket = socket(AF_INET, SOCK_STREAM, 0); //Calling the socket function - args: socket domain, socket stream type, TCP protocol (default)
-        struct sockaddr_in tcp_server_address;
-        tcp_server_address.sin_family = AF_INET; //Structure Fields' definition: Sets the address family of the address the client would connect to
 
-        tcp_server_address.sin_port = htons(60060); //Specify and pass the port number to connect - converting in right network byte order
 
-        if(inet_pton(AF_INET, serverIP, &tcp_server_address.sin_addr) <= 0){ //connects to the ip address specified. <= 0 means unsupported.
-            cerr << ("Invalid or unsupported address") << endl;
-            return -1;
-        }
 
-        //connecting to the remote socket
-        int connection_status = connect(tcp_client_socket, (struct sockaddr *) &tcp_server_address, sizeof(tcp_server_address)); //params: which socket, castfor address to the specific structure type, size of address
-       
-        if (connection_status == -1){
-        //return value of 0 means all okay, -1 means a problem
-        printf(" Problem connecting to the socket! Sorry!! \n");
-        }
+
+
+
+        while(true){
+            //Because the client opens with a message, we HAVE to check for the first message.
+            if(fullMessage[0] == '\0'){
+                cout << "enter request (or 'exit' to quit)\nReminder, running a GET requires GET /<filename>:  ";
+                cin.getline(fullMessage, sizeof(fullMessage));
+            }
+
+            if(strcmp(fullMessage, "exit") == 0){
+                cout << "exiting application\n\n";
+                break;
+            }
+
+            int tcp_client_socket; //Socket descriptor
+            tcp_client_socket = socket(AF_INET, SOCK_STREAM, 0); //Calling the socket function - args: socket domain, socket stream type, TCP protocol (default)
+            struct sockaddr_in tcp_server_address;
+            tcp_server_address.sin_family = AF_INET; //Structure Fields' definition: Sets the address family of the address the client would connect to
+
+            tcp_server_address.sin_port = htons(60060); //Specify and pass the port number to connect - converting in right network byte order
+
+            if(inet_pton(AF_INET, serverIP, &tcp_server_address.sin_addr) <= 0){ //connects to the ip address specified. <= 0 means unsupported.
+                cerr << ("Invalid or unsupported address") << endl;
+                return -1;
+            }
+
+            int connection_status = connect(tcp_client_socket, (struct sockaddr *) &tcp_server_address, sizeof(tcp_server_address)); //params: which socket, castfor address to the specific structure type, size of address
+        
+            if (connection_status == -1){
+            //return value of 0 means all okay, -1 means a problem
+            printf(" Problem connecting to the socket! Sorry!! \n");
+            }
+
+
+        cout << "Sending message: " << fullMessage << " to the server";
 
         //Send the loaded message.
-        send(tcp_client_socket, argv[2], strlen(argv[2]), 0);
-
-        /**
-         * Here's where I think a lot needs to change. The client application needs to remain after every send. We could do a while loop, exit on an argument 'exit' entering.
-         * offset the sending of a message, socket conection build up and teardown to another function, as done in the server. I don't know if the server would even be able to support
-         * a persistent connection.
-         */
-
-
-        char tcp_server_response[256];
+        send(tcp_client_socket, fullMessage, sizeof(fullMessage), 0);
+        
+        //As we know what the message sent from the server buffer is, we just set it to the same value there.
+        char tcp_server_response[1024];
         recv(tcp_client_socket, &tcp_server_response, sizeof(tcp_server_response), 0);
         // params: where (socket), what (string), how much - size of the server response, flags (0)
         //Output, as received from Server
@@ -105,6 +128,9 @@ int main(int argc, char *argv[]){
         //closing the socket
         close(tcp_client_socket);
 
+        memset(tcp_server_response, 0, sizeof(fullMessage));  //Clear both messages
+        memset(fullMessage, 0, sizeof(fullMessage));
+        }
 
 
     return 0;
